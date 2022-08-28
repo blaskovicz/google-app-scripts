@@ -106,7 +106,7 @@ function updateCostBreakdown(e) {
 
   const costs = {};
   const categories = [uAndRSheet.getName(), oilSheet.getName()];
-  const categoryColumnFurthest = 'C';
+  const categoryColumnFurthest = 'D';
 
   /** parseCostsFromSheet(sheet, costs, costColIndex, dateColIndex) */
   parseCostsFromSheet(uAndRSheet, costs, 4, 1);
@@ -117,23 +117,42 @@ function updateCostBreakdown(e) {
   // descending sort
   const years = Object.keys(costs).sort((a, b) => b-a);
   const fillerCols = categories.map(() => '');
+  fillerCols.push('');
+  const totals = {};
 
   const newCostData = [
     ['Yearly Cost by Sheet', ...fillerCols],
-    ['Year', ...categories],
+    ['Year', ...categories, 'TOTAL'],
   ];
   const headerRowCount = newCostData.length;
-  const newDataRange = 'A1:'+categoryColumnFurthest+(headerRowCount+years.length).toString()
+  const newDataRange = 'A1:'+categoryColumnFurthest+(headerRowCount+years.length+1).toString()
 
   for (const year of years) {
     const categoryInfo = costs[year];
     const row = [year];
-    for (const category of categories) {
+    totals[year] = {};
+    for (const category of categories) {      
       const categoryYearCost = categoryInfo[category] || 0;
       row.push('$'+categoryYearCost);
+
+      // sum all categories for the year, and all years for category
+      totals[year]['_'] = (totals[year]['_'] || 0) + categoryYearCost;
+      totals[year][category] = (totals[year][category] || 0) + categoryYearCost;
+      totals[category]  = (totals[category] || 0) + categoryYearCost;
+      totals['_'] = (totals['_'] || 0) + categoryYearCost;
     }
+
+    row.push('$' + totals[year]['_']);
     newCostData.push(row);
   }
+
+  const totalByYear = ['TOTAL'];
+  for (const category of categories) {
+    totalByYear.push('$' + totals[category]);
+  }
+  totalByYear.push('$' + totals['_']);
+
+  newCostData.push(totalByYear);  
 
   Logger.log(newDataRange);
   Logger.log(newCostData);
